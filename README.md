@@ -13,8 +13,6 @@ PA6:PWM，用逻辑分析器查看其周期，用于校准rc,在usb_rx()和usb_t
 
 如有疑问及改进方案，可联系tuoqiang@outlook.com
 
-在此再次感谢zib、wlianmin、rikka0w0.
-
   I noticed zib,wlianmin,rikka0w0 fullfilled and improved VUSB on stm8s103.Considering that stm32f030f4p6 is similar to and faster than stm8s103f3p6,I rewrite usb_rx.s and usb_tx.s in cortex-m0 asm.Then I modefy the usb.c by adding several "nop" to adjust time and use internal rc instead of crystal.As a result,the devices can be recognized as a mouse and works perfectly.But I don't konw much about usb and can't add other functions,such as string descriper,CDC,etc.I hope everyon can do a little for it.
 
 IMPORTANT:
@@ -26,4 +24,3 @@ PA6:PWM.You can view the period of it in logic analyzer to adjust internal rc by
 
 If you have problems and improvements,please contact tuoqiang@outlook.com
 
-Thanks to zib,wlianmin,rikka0w0 again!
