@@ -1,9 +1,8 @@
 /*
  * File: main.c
- * 2017.04.19
- * Modified by Ads830e
+ * Modified by Tuoqiang
  * Email:tuoqiang@outlook.com
-*/
+ */
 /*
  * File: main.c
  * Date: 02.01.2017
@@ -76,10 +75,10 @@ void main(void)
     
     asm("cpsid i");
     //TIM3CH1_Init();
-    usb_init();
+    USB_Init();
     asm("cpsie i");
     
-    usb_process_loop();
+    USB_Process_LOOP();
     
     while(1)
     {
@@ -92,7 +91,7 @@ void main(void)
         data_buffer[1] = x;
         data_buffer[2] = y;
         data_buffer[3] = 0x00;
-        usb_send_data(&data_buffer[0], 4, 0);
+        USB_Send_Data(&data_buffer[0], 4, 0);
     }
 }
 

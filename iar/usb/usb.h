@@ -1,7 +1,5 @@
 /*
- * File: usb.h
- * 2017.04.19
- * Modified by Ads830e
+ * Modified by Tuoqiang
  * Email:tuoqiang@outlook.com
 */
 /*
@@ -14,8 +12,8 @@
 #define USB_H_
 #include "hw.h"
 
-void usb_init(void);
-void usb_process_loop(void);
-void usb_send_data(const uint8_t * buffer, uint8_t lenght, uint8_t mode);
+void USB_Init(void);
+void USB_Process_LOOP(void);
+void USB_Send_Data(const uint8_t * buffer, uint8_t lenght, uint8_t mode);
 
 #endif /* USB_H_ */

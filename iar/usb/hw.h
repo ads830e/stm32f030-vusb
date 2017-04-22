@@ -1,7 +1,5 @@
 /*
- * File: hw.h
- * 2017.04.19
- * Created by Ads830e
+ * Created by Tuoqiang
  * Email:tuoqiang@outlook.com
 */
 #ifndef HW_H

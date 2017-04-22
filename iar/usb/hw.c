@@ -1,15 +1,13 @@
 /*
- * File: hw.c
- * 2017.04.19
- * Created by Ads830e
+ * Created by Tuoqiang
  * Email:tuoqiang@outlook.com
 */
 /*************************************************************************/
 #include "hw.h"
 #include "usbconfig.h"
 /*************************************************************************/
-uint16_t volatile *PORT_ODR,*PORT_IDR;
-uint32_t volatile *PORT_MODER;
+uint16_t volatile *VUSB_ODR,*VUSB_IDR;
+uint32_t volatile *VUSB_MODER;
 /*************************************************************************/
 void VUSB_GPIO_Init(void){
     GPIO_InitTypeDef GPIO_InitStructure;
@@ -37,9 +35,9 @@ void VUSB_GPIO_Init(void){
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_Init(GPIOA,&GPIO_InitStructure);
     
-    PORT_ODR=&GPIOA->ODR;
-    PORT_IDR=&GPIOA->IDR;
-    PORT_MODER=&GPIOA->MODER;
+    VUSB_ODR=&GPIOA->ODR;
+    VUSB_IDR=&GPIOA->IDR;
+    VUSB_MODER=&GPIOA->MODER;
 }
 
 void VUSB_Clock_Init(void){

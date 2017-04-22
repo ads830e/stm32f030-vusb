@@ -1,13 +1,9 @@
-/*
- * File: usbconfig.h
- * 2017.04.19
- * Created by Ads830e
- * Email:tuoqiang@outlook.com
-*/
-
 #ifndef VUSB_CONFIG
 #define VUSB_CONFIG
-
+/*
+ * Modified by Tuoqiang
+ * Email:tuoqiang@outlook.com
+*/
 /*
 D+ PA.0
 D- PA.1

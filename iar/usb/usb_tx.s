@@ -1,25 +1,23 @@
 /*
- * File: usb_tx.s
- * 2017.04.19
- * Created by Ads830e
+ * Create by Tuoqiang
  * Email:tuoqiang@outlook.com
 */
 /**************************************************************************/
 #include "usbconfig.h"
 /**************************************************************************/    
     //import
-    EXTERN	USB_TX_COUNT,USB_TX_BUFFER_POINTER
-    EXTERN PORT_ODR,PORT_MODER
+    EXTERN	usb_tx_count,usb_tx_buffer_ptr
+    EXTERN VUSB_ODR,VUSB_MODER
     //export
-    PUBLIC USB_TX
+    PUBLIC USB_Tx
 /**************************************************************************/
-    ;MODULE  usb_tx
+    ;MODULE  USB_Tx
     ;Declaration of sections.
     SECTION .text:CODE:NOROOT:REORDER(2)
     THUMB
     CODE
 //////////////////////////////////////////////////////////////////////////
-USB_TX:
+USB_Tx:
     push {r0-r7}
     mov r0,r8
     mov r1,r9
@@ -31,14 +29,14 @@ USB_TX:
 /////////////////////////////////////////////////////////////////////////
 
     //r9储存端口指针
-    ldr r0,=PORT_ODR
+    ldr r0,=VUSB_ODR
     ldr r0,[r0]
     mov r9,r0
     
     ////USB_TX函数不被中断，故GPIOA->ODR的其他位为常数
     //将其保存至r7,且将初始状态设为01
     ;r7=GPIOA->ODR
-    ldr r7,=PORT_ODR
+    ldr r7,=VUSB_ODR
     ldr r7,[r7]
     ldrh r7,[r7]
     ldr r0,=(~VUSB_MASK)
@@ -53,7 +51,7 @@ USB_TX:
     strh r7,[r0]
 /////////////////////////////////////////////////////////////////////////
     //将引脚设为输出
-    ldr r3,=PORT_MODER
+    ldr r3,=VUSB_MODER
     ldr r3,[r3]
     ldr r2,[r3]
     //d-
@@ -77,11 +75,11 @@ USB_TX:
     movs r6,#6
     
     //r5储存指针
-    ldr r5,=USB_TX_BUFFER_POINTER
+    ldr r5,=usb_tx_buffer_ptr
     ldr r5,[r5]
 //////////////////////////
     //r11储存字节数
-    ldr r0,=USB_TX_COUNT
+    ldr r0,=usb_tx_count
     ldrh r0,[r0]
     mov r11,r0
     
@@ -568,7 +566,7 @@ TX_END:
     strh r7,[r0]
 /////////////////////////////////////////////////////////////////////////////   
     //将引脚设为输入
-    ldr r3,=PORT_MODER
+    ldr r3,=VUSB_MODER
     ldr r3,[r3]
     ldr r2,[r3]
     //d-

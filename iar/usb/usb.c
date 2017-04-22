@@ -1,7 +1,5 @@
 /*
- * File: usb.c
- * 2017.04.19
- * Modified by Ads830e
+ * Modified by Tuoqiang
  * Email:tuoqiang@outlook.com
 */
 /*
@@ -13,39 +11,25 @@
 #include "usb.h"
 #include "hw.h"
 /*************************************************************************/
-typedef enum{
-    FALSE=0,
-    TRUE=!FALSE
-}Bool;
+
 #define ARRAY_LENGHT(Value)     (sizeof(Value) / sizeof(Value[0]))
 /*************************************************************************/
-extern void USB_TX(void);
+extern void USB_Tx(void);
 /*************************************************************************/
-uint16_t usb_ready,usb_ready_reg,data_sync;
-uint16_t USB_TX_COUNT,USB_RX_COUNT;
-uint8_t USB_RX_BUFFER[48];
-uint8_t *USB_TX_BUFFER_POINTER;
+uint16_t usb_ready,usb_ready_reg;
+uint16_t usb_tx_count,usb_rx_count;
+uint8_t usb_rx_buffer[48];
+uint8_t *usb_tx_buffer_ptr;
 /*************************************************************************/
-enum usb_settings
-{
-    USB_VENDOR_ID_LOW = 0x11, //
-    USB_VENDOR_ID_HIGH = 0x22,
-    USB_DEVICE_ID_LOW = 0x33, //
-    USB_DEVICE_ID_HIGH = 0x44,
-    USB_DEVICE_VERSION_LOW = 0x55, //
-    USB_DEVICE_VERSION_HIGH = 0x66
-};
-
-enum usb_events_list
+enum USB_Events
 {
     USB_EVENT_NO = 0, //
     USB_EVENT_RECEIVE_SETUP_DATA = 1, // приняты данные токена SETUP
     USB_EVENT_READY_DATA_IN = 2, // готовы данные для передачи в ПК
     USB_EVENT_WAIT_DATA_IN = 3, // ожидание готовности данных для передачи в ПК
-    USB_EVENT
 };
 
-enum usb_states_list
+enum USB_States
 {
     USB_STATE_IDLE = 0, //
     USB_STATE_SETUP = 1,
@@ -55,44 +39,95 @@ enum usb_states_list
     USB_STATE_ADDRESS_CHANGE = 5
 };
 
-enum usb_packets_id_list
+enum USB_Packet_ID
 {
-    USB_PID_SETUP = 0x2D, //
+    USB_PID_SETUP = 0x2D,
     USB_PID_DATA0 = 0xC3,
     USB_PID_DATA1 = 0x4B,
-    USB_PID_IN = 0x69, // данные для ПК
-    USB_PID_OUT = 0xE1, // данные от ПК
+    USB_PID_IN = 0x69,
+    USB_PID_OUT = 0xE1,
     USB_PID_ACK = 0xD2,
     USB_PID_NACK = 0x5A,
     USB_PID_STALL = 0x1E
 };
 
-enum usb_request_standart_type_list
+enum USB_Request_Type
 {
-    USB_REQUEST_TYPE_TO_DEVICE = 0x00,
-    USB_REQUEST_TYPE_TO_INTERFACE = 0x01,
-    USB_REQUEST_TYPE_TO_ENDPOINT = 0x02,
-    USB_REQUEST_TYPE_FROM_DEVICE = 0x80,
-    USB_REQUEST_TYPE_FROM_INTERFACE = 0x81,
-    USB_REQUEST_TYPE_FROM_ENDPOINT = 0x82
+    USBRQ_STD_TO_DEVICE = 0x00,
+    USBRQ_STD_TO_INTERFACE = 0x01,
+    USBRQ_STD_TO_ENDPOINT = 0x02,
+    USBRQ_STD_FROM_DEVICE = 0x80,
+    USBRQ_STD_FROM_INTERFACE = 0x81,
+    USBRQ_STD_FROM_ENDPOINT = 0x82,
+    
+    USBRQ_CLASS_TO_DEVICE = 0x20,
+    USBRQ_CLASS_TO_INTERFACE = 0x21,
+    USBRQ_CLASS_TO_ENDPOINT = 0x22,
+    USBRQ_CLASS_FROM_DEVICE = 0xa0,
+    USBRQ_CLASS_FROM_INTERFACE = 0xa1,
+    USBRQ_CLASS_FROM_ENDPOINT = 0xa2,
+      
+    USBRQ_VENDOR_TO_DEVICE = 0x40,
+    USBRQ_VENDOR_TO_INTERFACE = 0x41,
+    USBRQ_VENDOR_TO_ENDPOINT = 0x42,
+    USBRQ_VENDOR_FROM_DEVICE = 0xc0,
+    USBRQ_VENDOR_FROM_INTERFACE = 0xc1,
+    USBRQ_VENDOR_FROM_ENDPOINT = 0xc2,
+    
+    USBRQ_CLASS=0x20,
+    USBRQ_VENDOR=0x40
 };
 
-enum usb_request_list
+// USB Standard Requests 
+enum USB_Request
 {
-    USB_REQUEST_GET_STATUS = 0x00,
-    USB_REQUEST_SET_ADDRESS = 0x05,
-    USB_REQUEST_GET_DESCRIPTOR = 0x06,
-    USB_REQUEST_SET_DESCRIPTOR = 0x07,
-    USB_REQUEST_GET_CONFIGURATION = 0x08,
-    USB_REQUEST_SET_CONFIGURATION = 0x09
+    USBRQ_GET_STATUS = 0x00,
+    USBRQ_CLEAR_FEATURE=0x01,
+    USBRQ_SET_FEATURE=0x03,
+    USBRQ_SET_ADDRESS = 0x05,
+    USBRQ_GET_DESCRIPTOR = 0x06,
+    USBRQ_SET_DESCRIPTOR = 0x07,
+    USBRQ_GET_CONFIGURATION = 0x08,
+    USBRQ_SET_CONFIGURATION = 0x09,
+    USBRQ_GET_INTERFACE=0x0a,
+    USBRQ_SET_INTERFACE=0x0b,
+    USBRQ_SYNCH_FRAME=0x0c
 };
+
+// USB descriptor constants
+enum Descriptor_Type{
+    USBDESCR_DEVICE=0x01,
+    USBDESCR_CONFIG=0x02,
+    USBDESCR_STRING=0x03,
+    USBDESCR_INTERFACE=0x04,
+    USBDESCR_ENDPOINT=0x05,
+    USBDESCR_HID=0x21,
+    USBDESCR_HID_REPORT=0x22,
+    USBDESCR_HID_PHYS=0x23
+};
+
+enum USB_Power{
+    USBATTR_BUSPOWER=0x80,  // USB 1.1 does not define this value any more
+    USBATTR_SELFPOWER=0x40,
+    USBATTR_REMOTEWAKE=0x20,
+};
+#define USB_CFG_MAX_BUS_POWER 100
 /***************************************************************************/
+enum USB_PID_VID
+{
+    USB_VENDOR_ID_LOW = 0xc0, //
+    USB_VENDOR_ID_HIGH = 0x16,
+    USB_DEVICE_ID_LOW = 0xdc, //
+    USB_DEVICE_ID_HIGH = 0x05,
+    USB_DEVICE_VERSION_LOW = 0x01, //
+    USB_DEVICE_VERSION_HIGH = 0x01
+};
 const uint8_t usb_device_descriptor[] = { 
-    0x12, // Size of the Descriptor in Bytes
-    0x01, // Device Descriptor (0x01)
+    18, // Size of the Descriptor in Bytes
+    USBDESCR_DEVICE, // Device Descriptor (0x01)
     0x10, 
     0x01, // USB 1.1 = 0x0110， USB 1.0 = 0x0100
-    0x00, // Class Code
+    00,//0x00, // Class Code
     0x00, // Subclass Code
     0x00, // Protocol Code
     0x08, // Maximum Packet Size for Zero Endpoint
@@ -104,21 +139,109 @@ const uint8_t usb_device_descriptor[] = {
     0x00, // Index of Serial Number String Descriptor
     0x01, // Number of Possible Configurations
 };
+/*
+const uint8_t usb_configuration_descriptor[] = {   // USB configuration descriptor 
+    9,          // sizeof(usbDescrConfig): length of descriptor in bytes 
+    USBDESCR_CONFIG,    // descriptor type 
+    67,
+    0,          // total length of data returned (including inlined descriptors) 
+    2,          // number of interfaces in this configuration 
+    1,          // index of this configuration
+    0,          // configuration name string index
+    (1 << 7),                           // attributes
+    USB_CFG_MAX_BUS_POWER/2,            // max USB current in 2mA units
+
+    // interface descriptor follows inline:
+    9,          // sizeof(usbDescrInterface): length of descriptor in bytes
+    USBDESCR_INTERFACE, // descriptor type
+    0,          // index of this interface
+    0,          // alternate setting for this interface
+    1,//USB_CFG_HAVE_INTRIN_ENDPOINT,   // endpoints excl 0: number of endpoint descriptors to follow
+    2,//USB_CFG_INTERFACE_CLASS,
+    2,//USB_CFG_INTERFACE_SUBCLASS,
+    1,//USB_CFG_INTERFACE_PROTOCOL,
+    0,          // string index for interface
+
+    // CDC Class-Specific descriptor
+    5,           // sizeof(usbDescrCDC_HeaderFn): length of descriptor in bytes
+    0x24,        // descriptor type
+    0,           // header functional descriptor
+    0x10, 0x01,
+
+    4,           // sizeof(usbDescrCDC_AcmFn): length of descriptor in bytes
+    0x24,        // descriptor type
+    2,           // abstract control management functional descriptor
+    0x02,        // SET_LINE_CODING,    GET_LINE_CODING, SET_CONTROL_LINE_STATE
+
+    5,           // sizeof(usbDescrCDC_UnionFn): length of descriptor in bytes
+    0x24,        // descriptor type
+    6,           // union functional descriptor
+    0,           // CDC_COMM_INTF_ID
+    1,           // CDC_DATA_INTF_ID
+
+    5,           // sizeof(usbDescrCDC_CallMgtFn): length of descriptor in bytes
+    0x24,        // descriptor type
+    1,           // call management functional descriptor
+    3,           // allow management on data interface, handles call management by itself
+    1,           // CDC_DATA_INTF_ID
+
+    // Endpoint Descriptor
+    7,           // sizeof(usbDescrEndpoint)
+    USBDESCR_ENDPOINT,  // descriptor type = endpoint
+    0x83,        // IN endpoint number 3
+    0x03,        // attrib: Interrupt endpoint
+    8, 0,        // maximum packet size
+    64,//USB_CFG_INTR_POLL_INTERVAL,        // in ms
+
+    // Interface Descriptor
+    9,           // sizeof(usbDescrInterface): length of descriptor in bytes
+    USBDESCR_INTERFACE,           // descriptor type
+    1,           // index of this interface
+    0,           // alternate setting for this interface
+    2,           // endpoints excl 0: number of endpoint descriptors to follow
+    0x0A,        // Data Interface Class Codes
+    0,
+    0,           // Data Interface Class Protocol Codes
+    0,           // string index for interface
+
+    // Endpoint Descriptor
+    7,           // sizeof(usbDescrEndpoint)
+    USBDESCR_ENDPOINT,  // descriptor type = endpoint
+    0x01,        // OUT endpoint number 1
+    0x02,        // attrib: Bulk endpoint
+    
+    8,//HW_CDC_BULK_OUT_SIZE,
+    0,        // maximum packet size
+    
+    0,           // in ms
+
+    // Endpoint Descriptor
+    7,           // sizeof(usbDescrEndpoint)
+    USBDESCR_ENDPOINT,  // descriptor type = endpoint
+    0x81,        // IN endpoint number 1
+    0x02,        // attrib: Bulk endpoint
+    
+    8,//HW_CDC_BULK_IN_SIZE, 
+    0,        // maximum packet size
+    
+    0,           // in ms
+};
+*/
 
 const uint8_t usb_configuration_descriptor[] = { 
-    0x09, // Size of Descriptor in Bytes
-    0x02, // Configuration Descriptor (0x02)
+    9, // Size of Descriptor in Bytes
+    USBDESCR_CONFIG, // Configuration Descriptor (0x02)
     34,
     0x00, // Total length in bytes of data returned
     0x01, // Number of Interfaces
     0x01, // Value to use as an argument to select this configuration
     0x00, // Index of String Descriptor describing this configuration
-    0x80, // D7 Reserved, set to 1. (USB 1.0 Bus Powered), D6 Self Powered, D5 Remote Wakeup, D4..0 Reserved, set to 0.
-    50,   // Maximum Power Consumption in 2mA units
+    USBATTR_BUSPOWER, // D7 Reserved, set to 1. (USB 1.0 Bus Powered), D6 Self Powered, D5 Remote Wakeup, D4..0 Reserved, set to 0.
+    USB_CFG_MAX_BUS_POWER/2,   // Maximum Power Consumption in 2mA units
 
     // interface descriptor
-    0x09, // Size of Descriptor in Bytes (9 Bytes)
-    0x04, // Interface Descriptor (0x04)
+    9, // Size of Descriptor in Bytes (9 Bytes)
+    USBDESCR_INTERFACE, // Interface Descriptor (0x04)
     0x00, // Number of Interface
     0x00, // Value used to select alternative setting
     0x01, // Number of Endpoints used for this interface
@@ -129,18 +252,18 @@ const uint8_t usb_configuration_descriptor[] = {
 
     // HID descriptor
     9,    // Size of Descriptor in Bytes (9 Bytes)
-    0x21, // HID descriptor (0x21)
+    USBDESCR_HID, // HID descriptor (0x21)
     0x10, 
     0x01, // BCD representation of HID version
     0x21, // Target country code
-    0x01, // Number of HID Report (or other HID class) Descriptor infos to follow */
+    0x01, // Number of HID Report (or other HID class) Descriptor infos to follow
     0x22, // Descriptor type: report
     0x34,
-    0,  /* total length of report descriptor */
+    0,  // total length of report descriptor
 
     // Endpoint descriptor
-    0x07, // Size of Descriptor in Bytes (7 Bytes)
-    0x05, // Endpoint descriptor (0x05)
+    7, // Size of Descriptor in Bytes (7 Bytes)
+    USBDESCR_ENDPOINT, // Endpoint descriptor (0x05)
     0x81, // IN endpoint number 1 (0x81)
     0x03, // attrib: Interrupt endpoint
     0x04, // 
@@ -204,37 +327,41 @@ const uint8_t usb_report_descriptor[] = {
 };
 /***************************************************************************/
 const uint8_t usb_string_descriptor_language[] = {
-    0x04,
-    0x03,
+    4,
+    USBDESCR_STRING,
     0x09,
     0x04
 };
 const uint8_t usb_string_descriptor_vendor[] = {
-    0x10,
-    0x03,
+    42,
+    USBDESCR_STRING,
     't',0,'u',0,'o',0,'q',0,'i',0,'a',0,'n',0,'g',0,
     '@',0,
     'o',0,'u',0,'t',0,'l',0,'o',0,'o',0,'k',0,
     '.',0,'c',0,'o',0,'m',0
 };
-const uint8_t usb_string_descriptor_device[0x10] = {
-    0x10,
-    0x03,
-    'U',0,'S',0,'B',0,'-',0,'2',0,'3',0,'2',0
+//I don't why the device string is not recognized when it is shorter than 0x12,for example,0x10.
+//So I add a '\0'
+const uint8_t usb_string_descriptor_device[] = {
+    18,
+    USBDESCR_STRING,
+    'U',0,'S',0,'B',0,'-',0,'2',0,'3',0,'2',0,'\0',0
 };
-//const uint8_t usb_string_descriptor_device[] = {
-//    0x04,
-//    0x03,
-//    'U',0,'S',0,'B',0,
-//};
+
+
+const uint8_t usb_string_descriptor_serial[] = {
+    8,
+    USBDESCR_STRING,
+    '1',0,'0',0,'0',0,
+};
 /***************************************************************************/
-struct usb_type
+struct USB_Type
 {
     volatile uint8_t state;
     volatile uint8_t event;
     volatile uint8_t device_address;
 
-    uint8_t endpoint_number;
+    uint8_t endpoint;
     uint8_t setup_address;
     uint8_t setup_endpoint;
 
@@ -243,76 +370,78 @@ struct usb_type
 
     uint8_t tx_buffer[16];
     uint8_t tx_lenght;
-    uint8_t tx_is_all;
 }usb;
 /***************************************************************************/
-void usb_init(void)
+void USB_Init(void)
 {
     usb.state = USB_STATE_IDLE;
     usb.event = USB_EVENT_NO;
     usb.device_address = 0;
     usb.setup_address  = 0;
-    usb.tx_is_all = TRUE;
     usb_ready = 0;
     usb_ready_reg = 0;
-    usb.endpoint_number=0;
+    usb.endpoint=0;
     
     VUSB_GPIO_Init();
     VUSB_Clock_Init();
     VUSB_EXTI_Init();
 }
 /*************************************************************************/
-void usb_send_nack(void)
+void USB_Send_NACK(void)
 {
     uint8_t data[2];
     data[0] = 0x80;
     data[1] = USB_PID_NACK;
-    USB_TX_COUNT = 2;
-    USB_TX_BUFFER_POINTER = data;
-    USB_TX();        
+    usb_tx_count = 2;
+    usb_tx_buffer_ptr = data;
+    USB_Tx();        
 }
 
-void usb_send_ack(void)
+void USB_Send_ACK(void)
 {
     uint8_t data[2];
     data[0] = 0x80;
     data[1] = USB_PID_ACK;
-    USB_TX_COUNT = 2;
-    USB_TX_BUFFER_POINTER = data;       
-    USB_TX();
+    usb_tx_count = 2;
+    usb_tx_buffer_ptr = data;       
+    USB_Tx();
 }
 
-void usb_send_answer(void)
+void USB_Send_Answer(void)
 {
-    USB_TX_COUNT = usb.tx_lenght;
-    USB_TX_BUFFER_POINTER = &usb.tx_buffer[0];
-    USB_TX();
+    usb_tx_count = usb.tx_lenght;
+    usb_tx_buffer_ptr = &usb.tx_buffer[0];
+    USB_Tx();
 }
 /*************************************************************************/
-void usb_copy_rx_buffer(void)
+void USB_Copy_Rx_Buffer(void)
 {
     uint8_t index = 0;
-    for (index = 0; index < 16; index++) usb.rx_buffer[index] = USB_RX_BUFFER[index];
+    for (index = 0; index < 16; index++) usb.rx_buffer[index] = usb_rx_buffer[index];
 }
 /*************************************************************************/
-void USB_RX_OK(void)
+void USB_Rx_Response(void)
 {
-    switch (USB_RX_BUFFER[1])
+    switch (usb_rx_buffer[1])
     {
         case (USB_PID_SETUP):
-            usb.state = USB_STATE_SETUP;
-            usb.endpoint_number=USB_RX_BUFFER[2]>>7+(USB_RX_BUFFER[3]&0x07)<<1;
+            if((usb_rx_buffer[2]&0x7F)==usb.device_address){
+                usb.state = USB_STATE_SETUP;
+                usb.endpoint=usb_rx_buffer[2]>>7+(usb_rx_buffer[3]&0x07)<<1;
+            }
             break;
         case (USB_PID_OUT):
-            usb.state = USB_STATE_OUT;
-            usb.endpoint_number=USB_RX_BUFFER[2]>>7+(USB_RX_BUFFER[3]&0x07)<<1;
+            if((usb_rx_buffer[2]&0x7F)==usb.device_address){
+                usb.state = USB_STATE_OUT;
+                usb.endpoint=usb_rx_buffer[2]>>7+(usb_rx_buffer[3]&0x07)<<1;
+            }
             break;
         case (USB_PID_IN):
-            if((USB_RX_BUFFER[2]&0x7F)==usb.device_address) // It's our address
+            if((usb_rx_buffer[2]&0x7F)==usb.device_address) // It's our address
             {
                 if(usb.setup_address!=0)	//需要找个更好的地方
                 {
-                    usb.device_address=usb.setup_address;
+                    usb.device_address = usb.setup_address;
                 }
                 else{
                     nop();
@@ -342,18 +471,18 @@ void USB_RX_OK(void)
                 {
                     //ooooooooooooooo
                     nop();
-                    usb_send_nack();
-                    usb.endpoint_number=USB_RX_BUFFER[2]>>7+(USB_RX_BUFFER[3]&0x07)<<1;
+                    USB_Send_NACK();
+                    
                 }
                 else{
                     //ooooooooooooo
                     nop();
                     nop();
-                    usb_send_answer();
+                    USB_Send_Answer();
                     usb.state = USB_STATE_IN;
                     usb.event = USB_EVENT_WAIT_DATA_IN;
-                    usb.endpoint_number=USB_RX_BUFFER[2]>>7+(USB_RX_BUFFER[3]&0x07)<<1;
                 }
+                usb.endpoint=usb_rx_buffer[2]>>7+(usb_rx_buffer[3]&0x07)<<1;
             }
             break;
         case (USB_PID_DATA0):
@@ -380,15 +509,8 @@ void USB_RX_OK(void)
                 
                 nop();
                 
-                usb_send_ack();
-                
-                if (USB_RX_BUFFER[2] == USB_REQUEST_TYPE_TO_DEVICE 
-                    &&USB_RX_BUFFER[3] == USB_REQUEST_SET_ADDRESS)
-                {
-                    usb.setup_address = USB_RX_BUFFER[4];
-                }	
-                
-                usb_copy_rx_buffer();
+                USB_Send_ACK();
+                USB_Copy_Rx_Buffer();
                 usb.event = USB_EVENT_RECEIVE_SETUP_DATA;
             }
             else if (usb.state == USB_STATE_OUT)
@@ -421,7 +543,7 @@ void USB_RX_OK(void)
                 nop();
                 nop();
 		
-                usb_send_ack();
+                USB_Send_ACK();
                 usb.event == USB_EVENT_NO;
             }
             break;
@@ -462,7 +584,7 @@ void USB_RX_OK(void)
                 nop();
                 nop();
                 
-                usb_send_ack();
+                USB_Send_ACK();
                 usb.event == USB_EVENT_NO;
             }
             break;
@@ -474,7 +596,7 @@ void USB_RX_OK(void)
     }
 }
 /*************************************************************************/
-void usb_calc_crc16(uint8_t * buffer, uint8_t lenght)
+void USB_Calc_CRC16(uint8_t * buffer, uint8_t lenght)
 {
     uint16_t crc = 0xFFFF;
     uint8_t index;
@@ -497,9 +619,10 @@ void usb_calc_crc16(uint8_t * buffer, uint8_t lenght)
     *buffer = (uint8_t) (crc >> 8);
 }
 
-void usb_send_data(const uint8_t * buffer, uint8_t lenght, uint8_t mode)
+void USB_Send_Data(const uint8_t * buffer, uint8_t lenght, uint8_t mode)
 {
     uint8_t index;
+    static uint16_t data_sync;
     
     if(mode) data_sync = USB_PID_DATA1;
     while (lenght > 0)
@@ -519,7 +642,7 @@ void usb_send_data(const uint8_t * buffer, uint8_t lenght, uint8_t mode)
             lenght = 0;
         }
         // calculate CRC
-        usb_calc_crc16(&usb.tx_buffer[2], (uint8_t) (usb.tx_lenght - 4));
+        USB_Calc_CRC16(&usb.tx_buffer[2], (uint8_t) (usb.tx_lenght - 4));
         // toggle data0 data1
         if (data_sync == USB_PID_DATA1) data_sync = USB_PID_DATA0;
         else data_sync = USB_PID_DATA1;
@@ -534,7 +657,7 @@ void usb_send_data(const uint8_t * buffer, uint8_t lenght, uint8_t mode)
     }
 }
 
-void usb_send_null_data1(void)
+void USB_Send_Null_Data1(void)
 {
     usb.tx_lenght = 4;
     usb.tx_buffer[0] = 0x80;
@@ -544,7 +667,7 @@ void usb_send_null_data1(void)
     usb.event = USB_EVENT_READY_DATA_IN;
 }
 
-void usb_send_stall(void)
+void USB_Send_Stall(void)
 {
     usb.tx_lenght = 2;
     usb.tx_buffer[0] = 0x80;
@@ -552,92 +675,85 @@ void usb_send_stall(void)
     usb.event = USB_EVENT_READY_DATA_IN;
 }
 
-void usb_process(void)
-{
-    if (usb.event == USB_EVENT_RECEIVE_SETUP_DATA)
+void EP0_Process(void){
+    if (usb.event != USB_EVENT_RECEIVE_SETUP_DATA) return;
+    if(usb.rx_buffer[2]==USBRQ_STD_FROM_DEVICE)
     {
-        switch (usb.rx_buffer[2])
+        if(usb.rx_buffer[3]==USBRQ_GET_DESCRIPTOR) //0x06
         {
-            case (USB_REQUEST_TYPE_FROM_DEVICE): //0x80
+            switch (usb.rx_buffer[5])
             {
-                switch (usb.rx_buffer[3])
-                {
-                    case (USB_REQUEST_GET_DESCRIPTOR)://0x06
-                    {
-                        switch (usb.rx_buffer[5])
-                        {
-                            case (1):	// device descriptor
-                            {
-                                usb_send_data(&usb_device_descriptor[0], ARRAY_LENGHT(usb_device_descriptor), 1);
-                                break;
-                            }
-                            case (2):	// configuration descriptor
-                            {
-                                if(usb.rx_buffer[8]<ARRAY_LENGHT(usb_configuration_descriptor))
-                                    usb_send_data(&usb_configuration_descriptor[0],usb.rx_buffer[8], 1);
-                                else
-                                    usb_send_data(&usb_configuration_descriptor[0], ARRAY_LENGHT(usb_configuration_descriptor), 1);
-                                break;
-                            }
-                            case (3):	// string descriptor
-                            {
-                              
-                                if(usb.rx_buffer[4]==0) usb_send_data(usb_string_descriptor_language, ARRAY_LENGHT(usb_string_descriptor_language),1);
-                                else if(usb.rx_buffer[4]==1) usb_send_data(usb_string_descriptor_vendor, ARRAY_LENGHT(usb_string_descriptor_vendor),1);
-                                else if(usb.rx_buffer[4]==2) {
-                                      usb_send_data(usb_string_descriptor_device, ARRAY_LENGHT(usb_string_descriptor_device),1);
-                                }
-                                break;
-                            }
-                        }
-                        break;
-                    }
-                }
+            case USBDESCR_DEVICE:	// device descriptor
+                USB_Send_Data(usb_device_descriptor, ARRAY_LENGHT(usb_device_descriptor), 1);
                 break;
-            }
-            case (USB_REQUEST_TYPE_TO_DEVICE):	//0x00
-            {
-                switch (usb.rx_buffer[3])
-                {
-                    case (USB_REQUEST_SET_ADDRESS):	//0x05
-                    {
-                        usb.setup_address = usb.rx_buffer[4];
-                        usb_send_null_data1();
-                        break;
-                    }
-                    case (USB_REQUEST_SET_CONFIGURATION):	//0x09
-                    {
-                        usb_send_null_data1();
-                        break;
-                    }
-                }
+            case USBDESCR_CONFIG:	// configuration descriptor
+                if(usb.rx_buffer[8]<ARRAY_LENGHT(usb_configuration_descriptor)) USB_Send_Data(usb_configuration_descriptor,usb.rx_buffer[8], 1);
+                else USB_Send_Data(usb_configuration_descriptor, ARRAY_LENGHT(usb_configuration_descriptor), 1);
                 break;
-            }
-            case (0x81):
-            {
-                switch (usb.rx_buffer[3])
-                {
-                    case(USB_REQUEST_GET_DESCRIPTOR):
-                    {
-                        usb_send_data(&usb_report_descriptor[0], ARRAY_LENGHT(usb_report_descriptor), 1);
-                        usb_ready_reg=1;
-                        break;
-                    }
-                    default: break;
-                }
+            case USBDESCR_STRING:	// string descriptor
+                if(usb.rx_buffer[4]==0) USB_Send_Data(usb_string_descriptor_language, ARRAY_LENGHT(usb_string_descriptor_language),1);
+                else if(usb.rx_buffer[4]==1) USB_Send_Data(usb_string_descriptor_vendor, ARRAY_LENGHT(usb_string_descriptor_vendor),1);
+                else if(usb.rx_buffer[4]==2) USB_Send_Data(usb_string_descriptor_device, ARRAY_LENGHT(usb_string_descriptor_device),1);
+                else if(usb.rx_buffer[4]==3) USB_Send_Data(usb_string_descriptor_serial, ARRAY_LENGHT(usb_string_descriptor_serial),1);
                 break;
-            }
-            case (0x21):
-            {
-                usb_send_stall();
+            default:
                 break;
             }
         }
+        else if(usb.rx_buffer[3]==USBRQ_GET_STATUS){
+            uint8_t data[2];
+            //USB_Send_Stall();
+            //__asm("cpsid i");
+            //while(1);
+        }
+    }
+    else if (usb.rx_buffer[2]==USBRQ_STD_TO_DEVICE)
+    {
+        switch (usb.rx_buffer[3])
+        {
+        case (USBRQ_SET_ADDRESS):	//0x05
+            usb.setup_address = usb.rx_buffer[4];
+            USB_Send_Null_Data1();
+            break;
+        case (USBRQ_SET_CONFIGURATION):	//0x09
+            USB_Send_Null_Data1();
+            break;
+        }
+    }
+    else if (usb.rx_buffer[2]==USBRQ_STD_FROM_INTERFACE)
+    {
+        if (usb.rx_buffer[3]==USBRQ_GET_DESCRIPTOR)
+        {
+            USB_Send_Data(usb_report_descriptor, ARRAY_LENGHT(usb_report_descriptor), 1);
+            usb_ready_reg=1;
+        }
+    }
+    else if (usb.rx_buffer[2]==USBRQ_CLASS_TO_INTERFACE){
+        USB_Send_Stall();
     }
 }
 
-void usb_process_loop(void){
-    while(usb_ready == 0){
-        usb_process();
+
+void USB_Process(void)
+{
+    if(usb.endpoint==0) EP0_Process();
+    else if(usb.endpoint==1){
+    }
+    else if(usb.endpoint==2){
+    }
+    else if(usb.endpoint==3){
     }
 }
+
+
+void USB_Process_LOOP(void){
+    //while(usb_ready == 0)
+    while(1)    USB_Process();
+}
+/****************************************************************************/
+void EP1_Rx(void){}
+void EP1_Tx(void){}
+void EP2_Rx(void){}
+void EP2_Tx(void){}
+void EP3_Rx(void){}
+void EP3_Tx(void){}

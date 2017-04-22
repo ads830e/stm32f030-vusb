@@ -1,19 +1,17 @@
 /*
- * File: usb_rx.s
- * 2017.04.19
- * Created by Ads830e
+ * Created by Tuoqiang
  * Email:tuoqiang@outlook.com
 */
 /**************************************************************************/
 #include "usbconfig.h"
 /**************************************************************************/    
     //import
-    EXTERN USB_RX_COUNT,USB_RX_BUFFER
-    EXTERN PORT_IDR
+    EXTERN usb_rx_count,usb_rx_buffer
+    EXTERN VUSB_IDR
     
-    EXTERN USB_RX_OK
+    EXTERN USB_Rx_Response
     //export
-    PUBLIC USB_RX
+    PUBLIC USB_Rx
 /**************************************************************************/
     ;MODULE  usb_tx
     ;Declaration of sections.
@@ -21,7 +19,7 @@
     THUMB
     CODE
 //////////////////////////////////////////////////////////////////////////
-USB_RX:
+USB_Rx:
     push {r0-r7}
     mov r0,r8
     mov r1,r9
@@ -32,7 +30,7 @@ USB_RX:
     push {r0}
 //////////////////////////////////////////////
     //r9´¢´æ¶Ë¿ÚÖ¸Õë
-    ldr r0,=PORT_IDR
+    ldr r0,=VUSB_IDR
     ldr r0,[r0]
     mov r9,r0
     
@@ -49,7 +47,7 @@ USB_RX:
     movs r6,#6
     
     //r5´¢´æÖ¸Õë
-    ldr r5,=USB_RX_BUFFER
+    ldr r5,=usb_rx_buffer
     
     //r4´¢´æ×Ö½ÚÊý
     movs r4,#0h
@@ -462,7 +460,7 @@ BYTE_NEXT:
 RX_END:
     adds r4,#01h
 RX_END_1:
-    ldr r0,=USB_RX_COUNT
+    ldr r0,=usb_rx_count
     strh r4,[r0]
 ///////////////////////////////////////////////
 //    nop
@@ -473,7 +471,7 @@ RX_END_1:
 //    nop
 //    nop
 //    nop
-    bl USB_RX_OK
+    bl USB_Rx_Response
 //////////////////////////////////////////////
     pop {r0}
     mov lr,r0
