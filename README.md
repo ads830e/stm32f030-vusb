@@ -19,8 +19,8 @@ IMPORTANT:
 PA0:D+(EXTI)
 PA1:D-
 
-PA2:the output of it is same to PA1's.Used to debug.In logic analyzer it can be used to recognize the packet send by device.Can be remove.
-PA6:PWM.You can view the period of it in logic analyzer to adjust internal rc by adding nop in usb_rx() and usb_tx();Connect it to usb d+ to adjust usb_rx().Can be removed.
+PA2:The ODR of it is same to PA1's.Used to debug.In logic analyzer it can be used to distinguish the packet send by device.Can be removed.
+PA6:PWM.You can measure the period of it in logic analyzer to adjust internal rc by adding nop in usb_rx() and usb_tx();Connect it to usb d+ to adjust usb_rx().Can be removed.
 
 If you have problems and improvements,please contact tuoqiang@outlook.com
 
